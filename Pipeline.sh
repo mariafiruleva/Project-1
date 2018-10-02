@@ -1,9 +1,11 @@
-Trimmomatic=/usr/share/java/trimmomatic-0.35.jar
-raw_data=/home/maria/Bioinformatics/Practice/Project/raw_data
+#Notice you should change 'path' to your real paths
+
+Trimmomatic=/path/trimmomatic-0.35.jar
+raw_data=/path/raw_data
 Forward=$raw_data/amp_res_1.fastq
 Reverse=$raw_data/amp_res_2.fastq
 Reference=$raw_data/GCA_000005845.2_ASM584v2_genomic.fna
-FastQC=/home/maria/Bioinformatics/Practice/Project-1/FastQC
+FastQC=/path/FastQC
 Trimmed_forward=trimmed_1_P.fq
 Trimmed_reverse=trimmed_2_P.fq
 #fastqc analysis
@@ -41,4 +43,4 @@ samtools index alignment_sorted.bam
 
 samtools mpileup -f $Reference alignment_sorted.bam >  my.mpileup
 
-java -jar ~/Programs/VarScan.v2.3.9.jar mpileup2snp my.mpileup --min-var-freq 0 --variants --output-vcf 1 > VarScan_zero_results.vcf
+java -jar ~/Programs/VarScan.v2.3.9.jar mpileup2snp my.mpileup --min-var-freq 0.8 --variants --output-vcf 1 > VarScan_results.vcf
