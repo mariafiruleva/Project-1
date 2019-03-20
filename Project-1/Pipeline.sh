@@ -1,46 +1,28 @@
-#Notice you should change 'path' to your real paths
+!#/bin/bash
 
-Trimmomatic=/path/trimmomatic-0.35.jar
-raw_data=/path/raw_data
-Forward=$raw_data/amp_res_1.fastq
-Reverse=$raw_data/amp_res_2.fastq
-Reference=$raw_data/GCA_000005845.2_ASM584v2_genomic.fna
-FastQC=/path/FastQC
-Trimmed_forward=trimmed_1_P.fq
-Trimmed_reverse=trimmed_2_P.fq
-#fastqc analysis
-fastqc -o $FastQC $Forward $Reverse
+#Notice you must change all paths to your own paths.
 
-#trimmomatic
-java -jar $Trimmomatic PE -phred33 $Forward $Reverse trimmed_1_P.fq trimmed_1_U.fq trimmed_2_P.fq trimmed_2_U.fq LEADING:20 TRAILING:20 SLIDINGWINDOW:10:20 MINLEN:20
-java -jar $Trimmomatic PE -phred33 $Forward $Reverse 30q_trimmed_1_P.fq 30q_trimmed_1_U.fq 30q_trimmed_2_P.fq 30q_trimmed_2_U.fq LEADING:30 TRAILING:30 SLIDINGWINDOW:10:30 MINLEN:20
+#Quality Control
+for i in 'SRR941816' 'SRR941817' 'SRR941818' 'SRR941819'
+do
+fastqc $i.fastq
+done
 
-#fastqc analysis
+#Adapters trimming and Qualiti Control of paired fastq. 'adapters.fasta' is a file with adapters sequences which are presented in the section 'overrepresented sequences' in html output of previous step
+for i in 'SRR941816' 'SRR941817'
+do
+java -jar /usr/share/java/trimmomatic-0.35.jar SE -phred33 $i.fastq paired_$i.fastq ILLUMINACLIP:adapters.fasta:2:30:10 MINLEN:50
+fastqc paired_$i.fastq
+paired_$i.fastq > $i.fastq
+done
 
-fastqc -o $FastQC $Trimmed_forward $Trimmed_reverse
-fastqc -o $FastQC 30q_trimmed_1_P.fq 30q_trimmed_2_P.fq
+#Alignment
+for i in 'SRR941816' 'SRR941817' 'SRR941818' 'SRR941819'
+do
+/hisat2 -p 4 -x /home/maria/Bioinformatics/Practice/rna-seq/GCF_000146045.2_R64_genomic_index -U /home/maria/Bioinformatics/Practice/rna-seq/$i.fastq > $i.sam
+samtools view -bS $i.sam > $i.bam
+samtools sort $i.bam > sorted_$i.bam
+done
 
-#index the reference file
-bwa index $raw_data
-
-#alignment
-
-bwa mem $Reference $Trimmed_forward $Trimmed_reverse > alignment.sam
-
-#compress SAM file
-
-samtools view -S -b alignment.sam > alignment.bam
-
-samtools flagstat alignment.bam > statistics.txt
-
-#sort and index BAM file
-
-samtools sort alignment.bam alignment_sorted
-
-samtools index alignment_sorted.bam
-
-#variant calling
-
-samtools mpileup -f $Reference alignment_sorted.bam >  my.mpileup
-
-java -jar ~/Programs/VarScan.v2.3.9.jar mpileup2snp my.mpileup --min-var-freq 0.8 --variants --output-vcf 1 > VarScan_results.vcf
+#Raw counts
+featureCounts -g gene_name -a ../../GCF_000146045.2_R64_genomic../featureCounts -g gene_name -a ../../GCF_000146045.2_R64_genomic.gtf -o ../../summary_output_coord_sorted sorted_*.bam
